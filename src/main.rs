@@ -77,6 +77,7 @@ fn main(){
 
   let mut hue = 20;
   loop {
+    // dumb test code
     let pixels = std::iter::repeat(hsv2rgb(Hsv {
         hue,
         sat: 255,
@@ -87,6 +88,12 @@ fn main(){
         sat: 255,
         val: 50,
     })).take(5);
+    ws2812.write(pixels).unwrap();
+  
+    thread::sleep(Duration::from_millis(50));
+    ws2812.write(pixels2).unwrap();
+    thread::sleep(Duration::from_millis(50));
+    //---------------------
     if let Some(p) = ani.next_pattern() {
       let i = p.led_data.clone().iter();
       let o = [ RGB8{r:0xff,g:0,b:0},
@@ -95,11 +102,6 @@ fn main(){
               RGB8{r:0,g:0xff,b:0xff},
               RGB8{r:0xff,g:0,b:0xff}].to_vec();
       let ii = o.iter();
-      ws2812.write(pixels).unwrap();
-    
-      thread::sleep(Duration::from_millis(50));
-      ws2812.write(pixels2).unwrap();
-      thread::sleep(Duration::from_millis(50));
       //ws2812.write_nocopy(ii).unwrap();
     }
 
