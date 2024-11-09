@@ -119,13 +119,9 @@ fn main() {
     let mut ws2812 = Ws2812Esp32Rmt::new(channel, ws2812_pin).unwrap();
 
     loop {
-        if let Some(p) = ani.next_pattern() {
-          let l = p.led_data.clone();
-            let i = l.iter().copied();
-
-            ws2812.write_nocopy(i).unwrap();
-
+        ani.next_pattern().map(|p| {
+            ws2812.write_nocopy(p.led_data.iter().copied()).unwrap();
             thread::sleep(Duration::from_millis(p.time_step_ms()));
-        }
+        });
     }
 }
