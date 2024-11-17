@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use esp_idf_hal::peripherals::Peripherals;
 
+// use smart_leds::hsv::{hsv2rgb, Hsv};
 use smart_leds::RGB8;
 use ws2812_esp32_rmt_driver::Ws2812Esp32Rmt;
 
@@ -15,9 +16,9 @@ struct LedPattern {
 }
 
 impl LedPattern {
-    fn new(time: u64, led_data: [RGB8; LED_COUNT]) -> LedPattern {
+    fn new(time: u64, led_data: [RGB8; LED_COUNT]) -> Self {
         LedPattern {
-            time_step: LedPattern::convert_ms_to_time_step(time),
+            time_step: Self::convert_ms_to_time_step(time),
             led_data,
         }
     }
@@ -35,23 +36,24 @@ impl LedPattern {
 
 struct LedAnimation {
     entries: Vec<LedPattern>,
-    pointer: usize,
+    index: usize,
+    offset: u8,
 }
 
 impl LedAnimation {
     fn new() -> Self {
         LedAnimation {
             entries: Vec::new(),
-            pointer: 0,
+            index: 0,
         }
     }
     fn next_pattern(&mut self) -> Option<LedPattern> {
-        let ret = if let Some(pat) = self.entries.get(self.pointer % self.entries.len()) {
+        let ret = if let Some(pat) = self.entries.get(self.index) {
             Some(pat.clone())
         } else {
             None
         };
-        self.pointer += 1;
+        self.index = (self.index + 1) % self.entries.len();
         ret
     }
     fn add_pattern(&mut self, pattern: LedPattern) {
@@ -73,8 +75,8 @@ fn main() {
     let ws2812_pin = peripherals.pins.gpio10;
     let channel = peripherals.rmt.channel0;
     let mut ani = LedAnimation::new();
-    let pat = LedPattern::new(
-        500,
+    ani.add_pattern(LedPattern::new(
+        100,
         [
             RGB8 {
                 r: 0xff, g: 0, b: 0,
@@ -92,10 +94,9 @@ fn main() {
                 r: 0xff, g: 0, b: 0xff,
             },
         ],
-    );
-    ani.add_pattern(pat);
-    let pat = LedPattern::new(
-        500,
+    ));
+    ani.add_pattern(LedPattern::new(
+        100,
         [
             RGB8 {
                 r: 0xff, g: 0, b: 0xff,
@@ -113,15 +114,80 @@ fn main() {
                 r: 0, g: 0xff, b: 0xff,
             },
         ],
-    );
-    ani.add_pattern(pat);
+    ));
+    ani.add_pattern(LedPattern::new(
+        100,
+        [
+            RGB8 {
+                r: 0, g: 0xff, b: 0xff,
+            },
+            RGB8 {
+                r: 0xff, g: 0, b: 0xff,
+            },
+            RGB8 {
+                r: 0xff, g: 0, b: 0,
+            },
+            RGB8 {
+                r: 0, g: 0xff, b: 0,
+            },
+            RGB8 {
+                r: 0, g: 0, b: 0xff,
+            },
+        ],
+    ));
+    ani.add_pattern(LedPattern::new(
+        100,
+        [
+            RGB8 {
+                r: 0, g: 0, b: 0xff,
+            },
+            RGB8 {
+                r: 0, g: 0xff, b: 0xff,
+            },
+            RGB8 {
+                r: 0xff, g: 0, b: 0xff,
+            },
+            RGB8 {
+                r: 0xff, g: 0, b: 0,
+            },
+            RGB8 {
+                r: 0, g: 0xff, b: 0,
+            },
+        ],
+    ));
+    ani.add_pattern(LedPattern::new(
+        100,
+        [
+            RGB8 {
+                r: 0, g: 0xff, b: 0,
+            },
+            RGB8 {
+                r: 0, g: 0, b: 0xff,
+            },
+            RGB8 {
+                r: 0, g: 0xff, b: 0xff,
+            },
+            RGB8 {
+                r: 0xff, g: 0, b: 0xff,
+            },
+            RGB8 {
+                r: 0xff, g: 0, b: 0,
+            },
+        ],
+    ));
 
     let mut ws2812 = Ws2812Esp32Rmt::new(channel, ws2812_pin).unwrap();
 
-    loop {
-        ani.next_pattern().map(|p| {
+    let thread_b = thread::spawn(move || {
+        loop{
+            ani.next_pattern().map(|p| {
             ws2812.write_nocopy(p.led_data.iter().copied()).unwrap();
             thread::sleep(Duration::from_millis(p.time_step_ms()));
         });
+        }
+    });
+
+    loop {
+
     }
 }
